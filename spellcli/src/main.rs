@@ -16,9 +16,12 @@ fn main() {
     }
     let word = first_word(&input).to_lowercase();
 
-    for string in ["maximum", "minimum", "total"].into_iter(){
-        println!("The word you typed is {}% simmalar to the word '{}'", 
-            WordSim::new(&word, string).get_sim() * 100.0, string);
+    for wordsim in check_against(&word, 1).into_iter(){
+        println!(
+            "The word you typed ('{word}') is {}% simmalar to the word '{}'", 
+            wordsim.get_sim(),
+            wordsim.get_word_2(),
+        )
     }
 
     //println!("First word you typed: {}", word);
