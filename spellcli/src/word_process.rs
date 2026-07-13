@@ -33,8 +33,6 @@ pub fn first_word(string: &str) -> String {
 }
 
 use crate::math::Average;
-use std::cmp::Ordering;
-
 /// Stores how similar two words are 
 #[derive(Clone)]
 pub struct WordSim<'s>{
@@ -44,7 +42,7 @@ pub struct WordSim<'s>{
     sim_amount: f32, // 0.0 = 0%, 1.0 = 100%
 }
 
-use std::collections::{HashMap, hash_map::Entry};
+use std::collections::HashMap;
 impl<'s> WordSim<'s>{
 
     pub fn get_word_2(&self) -> &str {
@@ -62,6 +60,7 @@ impl<'s> WordSim<'s>{
         // <letter, (word_1 count, word_2 count)>
         let mut word_map: HashMap<char, (i32, i32)> = HashMap::new();
 
+        // getting the counts of each letter in the two words
         for _ in 0..largest_word_count{
             if let Some(letter_1) = word_1_iter.next() {
                 (word_map.entry(letter_1).or_insert( (0, 0) )).0 += 1;
@@ -78,15 +77,6 @@ impl<'s> WordSim<'s>{
             let dif = max - min;
 
             average.add(1.0 - (dif as f32 / max as f32));
-
-            /*
-            for _ in 0..dif{
-                average.add(0.0);
-            }
-            for _ in 0..max-dif {
-                average.add(1.0);
-            }
-            */
         }
 
         Self{

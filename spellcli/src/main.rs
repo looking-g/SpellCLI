@@ -16,10 +16,10 @@ fn main() {
     }
     let word = first_word(&input).to_lowercase();
 
-    for wordsim in check_against(&word, 1).into_iter(){
+    for wordsim in check_against(&word, 5).into_iter(){
         println!(
             "The word you typed ('{word}') is {}% simmalar to the word '{}'", 
-            wordsim.get_sim(),
+            wordsim.get_sim() * 100.0,
             wordsim.get_word_2(),
         )
     }
