@@ -4,17 +4,63 @@
 
 use reqwest;
 use wordnik_list as word_lib;
+use serde_json::{self, Value};
 
 /// Gets the definitaion(s) of a word
-pub fn get_word_defs(word: &str) -> String {
+pub async fn get_word_defs(word: &str, num_of_defs: u32) -> Vec<WordDef> {
     let dictionary_check = format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", word);
-    let body = reqwest::blocking::get(dictionary_check).unwrap()
-        .text().unwrap();
+    let body = reqwest::get(dictionary_check).await.unwrap()
+        .text().await.unwrap();
+    let json_body: Value = serde_json::from_str(&body)
+        .expect("api.dictionaryapi.dev should always return valid json");
 
-    println!("body = {body:?}");
+    let mut output = Vec::new();
 
-    "".to_string()
+
+    for def_num in 0..num_of_defs {
+        let word_map = &json_body[0]["meanings"][def_num as usize];
+
+        let word_def = &word_map["definitions"][0]["definition"];
+        let part_of_speech = &word_map["partOfSpeech"];
+
+
+        let word_def = word_def.as_str(); // might be somthing wrong with .as_str()
+        let part_of_speech = part_of_speech.as_str();
+
+        output.push(
+            WordDef::new(
+                word.to_string(), 
+                if let Some(def) = word_def {
+                    Some(def.to_string())
+                } else { None },
+                if let Some(pos) = part_of_speech {
+                    Some(pos.to_string())
+                } else { None },
+            )
+        );
+    }
+    output
 }
+
+/// Holds some definitions of a word
+#[derive(Debug)]
+pub struct WordDef{
+    #[allow(unused)]
+    pub word: String,
+    pub def: Option<String>,
+    pub part_of_speech: Option<String>,
+}
+impl WordDef {
+    fn new(word: String, def: Option<String>, part_of_speech: Option<String>) -> Self {
+        Self{
+            word, 
+            def, 
+            part_of_speech,
+        }
+    }
+
+}
+
 
 /// Gets the first word in a `&str`
 pub fn first_word(string: &str) -> String {
@@ -49,6 +95,8 @@ impl<'s> WordSim<'s>{
         self.word_2
     }
 
+    /// Calculates the similarity of of two words, if the words are the exact same, they have a
+    /// similarity of `inf`
     pub fn new(word_1: &'s str, word_2: &'s str) -> Self{
         let mut average = Average::new();
 
@@ -79,10 +127,18 @@ impl<'s> WordSim<'s>{
             average.add(1.0 - (dif as f32 / max as f32));
         }
 
+
+        let mut sim_amount = average.solve().unwrap_or(0.0);
+        // if the word is the exact same it is inf simmalar
+        if sim_amount == 1.0 && word_1 == word_2 {
+            sim_amount = 1.0/0.0;
+        }
+
+
         Self{
             word_1,
             word_2,
-            sim_amount: average.solve().unwrap_or(0.0),
+            sim_amount,
         }
     }
 
