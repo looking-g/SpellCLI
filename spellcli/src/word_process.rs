@@ -7,10 +7,10 @@ use wordnik_list as word_lib;
 use serde_json::{self, Value};
 
 /// Gets the definitaion(s) of a word
-pub async fn get_word_defs(word: &str, num_of_defs: u32) -> Vec<WordDef> {
+pub fn get_word_defs(word: &str, num_of_defs: u32, client: &reqwest::blocking::Client) -> Vec<WordDef> {
     let dictionary_check = format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", word);
-    let body = reqwest::get(dictionary_check).await.unwrap()
-        .text().await.unwrap();
+    let body = client.get(dictionary_check).send().unwrap() // TODO: code better error handling
+        .text().unwrap();
     let json_body: Value = serde_json::from_str(&body)
         .expect("api.dictionaryapi.dev should always return valid json");
 
@@ -81,23 +81,23 @@ pub fn first_word(string: &str) -> String {
 use crate::math::Average;
 /// Stores how similar two words are 
 #[derive(Clone)]
-pub struct WordSim<'s>{
+pub struct WordSim{
     #[allow(unused)]
-    word_1: &'s str,
-    word_2: &'s str,
+    word_1: String,
+    word_2: String,
     sim_amount: f32, // 0.0 = 0%, 1.0 = 100%
 }
 
 use std::collections::HashMap;
-impl<'s> WordSim<'s>{
+impl WordSim{
 
     pub fn get_word_2(&self) -> &str {
-        self.word_2
+        &self.word_2
     }
 
     /// Calculates the similarity of of two words, if the words are the exact same, they have a
     /// similarity of `inf`
-    pub fn new(word_1: &'s str, word_2: &'s str) -> Self{
+    pub fn new(word_1: &str, word_2: &str) -> Self{
         let mut average = Average::new();
 
         let mut word_1_iter = word_1.chars().into_iter();
@@ -136,8 +136,8 @@ impl<'s> WordSim<'s>{
 
 
         Self{
-            word_1,
-            word_2,
+            word_1: word_1.to_string(),
+            word_2: word_2.to_string(),
             sim_amount,
         }
     }
@@ -150,14 +150,14 @@ impl<'s> WordSim<'s>{
 }
 
 /// Stores WordSims in order of sim
-struct WordSimStorage<'s>{
+struct WordSimStorage{
     #[allow(unused)]
     len: u32,
     // stored [largest % .. smallest %]
-    wordsims: Vec<WordSim<'s>>,
+    wordsims: Vec<WordSim>,
 }
 
-impl<'s> WordSimStorage<'s>{
+impl WordSimStorage{
     /// Creats a new WordSimStorage
     // wordsims will always be full
     fn new(size: u32) -> Self {
@@ -167,7 +167,7 @@ impl<'s> WordSimStorage<'s>{
         }
     }
 
-    fn add(&mut self, new_wordsim: WordSim<'s>) {
+    fn add(&mut self, new_wordsim: WordSim) {
 
         let mut place_val = 0;
         for wordsim in self.wordsims.iter(){  
@@ -182,22 +182,64 @@ impl<'s> WordSimStorage<'s>{
         self.wordsims[(place_val-1) as usize] = new_wordsim;
     }
 
-    fn get_vec(&self) -> Vec<WordSim<'s>> {
+    fn get_vec(&self) -> Vec<WordSim> {
         self.wordsims.clone()
     }
+
 }
 
+
+use std::sync::{mpsc::channel, Arc, Mutex};
+use std::thread;
 /// Returns the top `top_number` most similar words to the input string
-pub fn check_against<'s>(string: &'s str, top_number: u32) -> Vec<WordSim<'s>> {
-    let all_words: Vec<&'static str> = word_lib::word_iterator().collect();
+pub fn check_against(string: &str, top_number: u32, threads: u32) -> Vec<WordSim> {
+    let all_words: Arc<Vec<String>> = 
+        Arc::new(word_lib::word_iterator().map(|ref_str| ref_str.to_string()).collect());
 
-    let mut output: WordSimStorage<'s> = WordSimStorage::new(top_number);
-
-    for word in all_words.into_iter() {
-        output.add(WordSim::new(string, word));
+    // getting jobs
+    let all_words_count = all_words.len() as u32;
+    // there is 1 job for each tread, each index in job holds the indexes of all_words that the
+    // thread haves to compute
+    // Vec<(start of job, end of job)> (of length threads) (inclusive, exclusive)
+    let mut jobs: Vec<(u32, u32)> = Vec::new();
+    let job_size = all_words_count/threads;
+    for job in 0..threads {
+        jobs.push( (job_size*job, job_size*(job+1)) ); 
+        if job+1 == threads {
+            jobs[job as usize].1 = all_words_count;
+        }
     }
 
-    output.get_vec()
+    // doing the jobs
+    let output: Arc<Mutex<WordSimStorage>> = 
+        Arc::new(Mutex::new(WordSimStorage::new(top_number))); // holds the out data
+    let (tx, rx) = channel::<()>(); // used to tell main thread when sub threads are done
+    let string = Arc::new(string.to_string());
+                              
+    for job_set in jobs.into_iter() {
+        let (string, all_words, output, tx) = (
+            string.clone(),
+            all_words.clone(),
+            output.clone(),
+            tx.clone(),
+        );
+        thread::spawn(move || {
+            for i in job_set.0..job_set.1 {
+                let compare_word = &all_words[i as usize];
+                let word_sim = WordSim::new(&*string, &compare_word);
+
+                let mut output = output.lock().unwrap();
+                (*output).add(word_sim);
+            } 
+            std::mem::drop(tx);
+        });
+    }
+    std::mem::drop(tx);
+
+    while let Ok(_) = rx.recv() { }
+
+
+    output.lock().unwrap().get_vec()
 }
 
 

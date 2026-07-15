@@ -1,5 +1,5 @@
 use std::io;
-use tokio;
+
 
 mod math;
 
@@ -7,10 +7,13 @@ mod word_process;
 use word_process::*;
 
 use std::collections::HashMap;
+use std::time;
+use std::sync::{mpsc, Arc};
+use std::thread;
 
-#[tokio::main]
-async fn main() {
-
+fn main() {
+    
+    // input handleing 
     println!("Check word: ");
 
     let mut input = String::new();
@@ -19,24 +22,43 @@ async fn main() {
     if let Err(e) = result{
         println!("read_line error: {}", e);
     }
+    let timer = time::Instant::now(); // Timer for timing this CLI 
     let word = first_word(&input).to_lowercase();
-
     if word.len() < 2 { println!("input is too short"); return (); }
 
+
     // getting all the words
-    let wordsims: Vec<_> = check_against(&word, 5).into_iter().rev().collect();
+    let wordsims: Vec<WordSim> = check_against(&word, 5, 4).into_iter().rev().collect();
 
     // getting the word defs
+
+
+    let (tx, rx) = mpsc::channel(); // transmitter and receiver for the def hashmap data
     let mut word_defs: HashMap<String, Vec<WordDef>> = HashMap::new();
+    let client = Arc::new(reqwest::blocking::Client::new());
     for wordsim in wordsims.iter() {
-        word_defs.insert(
+        let (word_2, sender, client_ref) = (
             wordsim.get_word_2().to_string(),
-            get_word_defs(wordsim.get_word_2(), 2_u32).await,
+            tx.clone(),
+            client.clone(),
         );
+        thread::spawn(move || {
+            let def_data = (
+                word_2.to_string(),
+                get_word_defs(&word_2, 2_u32, &*client_ref),
+            );
+            sender.send(def_data).unwrap();
+        });
+    }
+    std::mem::drop(tx);
+
+    for def in rx{
+        word_defs.insert(def.0, def.1);
     }
 
+
     // printing info
-    for wordsim in wordsims{
+    for wordsim in wordsims.iter(){
         // this is (one of) the word(s) the code found to be simmalar to the input word
         let word2 = wordsim.get_word_2();
 
@@ -78,4 +100,7 @@ async fn main() {
         );
         
     }
+
+    println!("Took {} millis to run", timer.elapsed().as_millis());
+
 }
