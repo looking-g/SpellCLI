@@ -84,7 +84,7 @@ fn main() {
 
                 println!("✅ '{word}' IS a word ✅");
                 println!("Definition of {word}");
-                print_def(&wordsim, &word_defs);
+                print_def(&wordsim, &word_defs, false);
 
                 println!("Simmalar words:\n");
 
@@ -92,7 +92,7 @@ fn main() {
                 println!("❌ '{word}' is NOT a word ❌");
                 println!("Simmalar words:\n");
 
-                print_def(&wordsim, &word_defs); 
+                print_def(&wordsim, &word_defs, true); 
             }
 
         }
@@ -107,7 +107,7 @@ fn main() {
     for wordsim in wordsims_iter{
         // this is (one of) the word(s) the code found to be simmalar to the input word
 
-        print_def(&wordsim, &word_defs);
+        print_def(&wordsim, &word_defs, true);
 
         num_print_def -= 1;
 
@@ -122,7 +122,7 @@ fn main() {
 }
 
 /// Prints out the definition and compareesent of a word if one is found
-fn print_def(wordsim: &WordSim, lookup: &HashMap<String, Vec<WordDef>>) {
+fn print_def(wordsim: &WordSim, lookup: &HashMap<String, Vec<WordDef>>, display_sim: bool) {
 
         let word = wordsim.get_word_1();
         let word2 = wordsim.get_word_2();
@@ -149,13 +149,17 @@ fn print_def(wordsim: &WordSim, lookup: &HashMap<String, Vec<WordDef>>) {
 
         }
             
+        if display_sim {
+            def_text = format!(
+                "'{word}' is {}% simmalar to the word '{}'\n{}", 
+                wordsim.get_sim() * 100.0,
+                wordsim.get_word_2(),
+                def_text,
+            );
 
-        println!(
-            "'{word}' is {}% simmalar to the word '{}'\n{}", 
-            wordsim.get_sim() * 100.0,
-            wordsim.get_word_2(),
-            def_text,
-        );
+        }
+
+        println!( "{}", def_text);
 }
 
 
