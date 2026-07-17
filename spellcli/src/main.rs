@@ -117,7 +117,9 @@ fn main() {
         
     }
 
-    println!("Took {} millis to run", timer.elapsed().as_millis());
+    if cfg!(debug_assertions) {
+        println!("Took {} millis to run", timer.elapsed().as_millis());
+    }
 
 }
 
