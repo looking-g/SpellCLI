@@ -80,9 +80,8 @@ pub fn first_word(string: &str) -> String {
 
 use crate::math::Average;
 /// Stores how similar two words are 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WordSim{
-    #[allow(unused)]
     word_1: String,
     word_2: String,
     sim_amount: f32, // 0.0 = 0%, 1.0 = 100%
@@ -93,6 +92,10 @@ impl WordSim{
 
     pub fn get_word_2(&self) -> &str {
         &self.word_2
+    }
+
+    pub fn get_word_1(&self) -> &str {
+        &self.word_1
     }
 
     /// Calculates the similarity of of two words, if the words are the exact same, they have a
