@@ -1,10 +1,13 @@
 [package]
 name = "spellcli"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
+license = "MIT"
+repository = "https://github.com/looking-g/SpellCLI"
+description = "A CLI that allows you to check the spelling of different words."
+
 
 [dependencies]
-
 reqwest = {version = "0.13", features = ["blocking"]}
 wordnik_list = "0.2"
 serde_json = "1.0"
