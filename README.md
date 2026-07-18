@@ -12,13 +12,17 @@ A CLI that allows you to check the spelling of different words.
 Input a word to check it's spelling.
 ![spelling](images/spelling.png)
 
-<!-- the program is not on crates.io yet
 # Install
 This program can be installed with:
 ```bash
 cargo install spellcli
 ```
+and than ran with:
+```bash
+spellcli
+```
+
 _[cargo needs to be installed first.](https://rust-lang.org/tools/install/)_
--->
+
 # AI Usage
 AI was not used in any way toward the creation of this project.
