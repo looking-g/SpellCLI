@@ -5,6 +5,7 @@ edition = "2024"
 license = "MIT"
 repository = "https://github.com/looking-g/SpellCLI"
 description = "A CLI that allows you to check the spelling of different words."
+readme = "README.md"
 
 
 [dependencies]
