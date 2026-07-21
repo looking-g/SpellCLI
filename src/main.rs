@@ -1,8 +1,6 @@
 use std::io;
 
 
-mod math;
-
 mod word_process;
 use word_process::*;
 

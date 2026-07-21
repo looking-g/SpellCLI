@@ -78,7 +78,6 @@ pub fn first_word(string: &str) -> String {
     word
 }
 
-use crate::math::Average;
 /// Stores how similar two words are 
 #[derive(Clone, Debug)]
 pub struct WordSim{
