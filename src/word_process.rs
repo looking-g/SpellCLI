@@ -100,43 +100,58 @@ impl WordSim{
 
     /// Calculates the similarity of of two words, if the words are the exact same, they have a
     /// similarity of `inf`
+    ///
+    /// Difference calculated example:
+    /// The words "hight" and "slit" will have
+    /// leftovers = 'h', 'g', 'h', 's', 'l'
+    /// movements = ('t', 1), ('i', 1)
+    /// diff = movments + (lefovers * max len) = 27
+    /// max diff = (len1+len2) * max len = 45
+    /// sim_amount = 1.0 - (diff / totel diff) = 0.4
     pub fn new(word_1: &str, word_2: &str) -> Self{
-        let mut average = Average::new();
+
 
         let mut word_1_iter = word_1.chars().into_iter();
         let mut word_2_iter = word_2.chars().into_iter();
 
-        let largest_word_count = word_1.chars().count().max(word_2.chars().count()) as i32;
+        let word_1_count = word_1.chars().count();
+        let word_2_count = word_2.chars().count();
+        let largest_word_count = word_1_count.max(word_2_count) as i32;
 
-        // <letter, (word_1 count, word_2 count)>
-        let mut word_map: HashMap<char, (i32, i32)> = HashMap::new();
+        // <letter, (Vec<placements where that letter is at for word_1>, Vec<same, but for word 2> )>
+        let mut word_map: HashMap<char, (Vec<u32>, Vec<u32>)> = HashMap::new();
+        let blank_2uvecs: (Vec<u32>, Vec<u32>) = (Vec::new(), Vec::new());
 
         // getting the counts of each letter in the two words
-        for _ in 0..largest_word_count{
+        for word_place in 0..largest_word_count as u32{
             if let Some(letter_1) = word_1_iter.next() {
-                (word_map.entry(letter_1).or_insert( (0, 0) )).0 += 1;
+                (word_map.entry(letter_1).or_insert( blank_2uvecs.clone() )).0.push(word_place);
             }
             if let Some(letter_2) = word_2_iter.next() {
-                (word_map.entry(letter_2).or_insert( (0, 0) )).1 += 1;
+                (word_map.entry(letter_2).or_insert( blank_2uvecs.clone() )).1.push(word_place);
             }
         }
 
         // comparing the two word counts
-        for (_letter, (count_1, count_2)) in word_map.into_iter() {
-            let max = count_1.max(count_2);
-            let min = count_1.min(count_2);
-            let dif = max - min;
-
-            average.add(1.0 - (dif as f32 / max as f32));
+        let mut leftovers = 0_u32;
+        let mut movements = 0_u32;
+        
+        for (_letter, (mut places1, mut places2)) in word_map.into_iter() {
+            while places1.len() > 0 && places2.len() > 0 {
+                movements += ( places1.pop().unwrap() as i32 - places2.pop().unwrap() as i32 ).abs() as u32;
+            }
+            leftovers += (places1.len() + places2.len()) as u32;
         }
 
+        let max_diff = (word_1_count + word_2_count) * largest_word_count as usize;
+        let diff = movements + (leftovers * largest_word_count as u32);
 
-        let mut sim_amount = average.solve().unwrap_or(0.0);
+        let mut sim_amount = 1.0 - (diff as f32 / max_diff as f32);
+
         // if the word is the exact same it is inf simmalar
         if sim_amount == 1.0 && word_1 == word_2 {
             sim_amount = 1.0/0.0;
         }
-
 
         Self{
             word_1: word_1.to_string(),
