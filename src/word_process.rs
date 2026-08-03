@@ -7,12 +7,14 @@ use wordnik_list as word_lib;
 use serde_json::{self, Value};
 
 /// Gets the definitaion(s) of a word
-pub fn get_word_defs(word: &str, num_of_defs: u32, client: &reqwest::blocking::Client) -> Vec<WordDef> {
+pub fn get_word_defs(word: &str, num_of_defs: u32, client: &reqwest::blocking::Client) -> Result<Vec<WordDef>, Box<dyn std::error::Error>> {
     let dictionary_check = format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", word);
-    let body = client.get(dictionary_check).send().unwrap() // TODO: code better error handling
-        .text().unwrap();
-    let json_body: Value = serde_json::from_str(&body)
-        .expect(&format!("api.dictionaryapi.dev should always return valid json, data: {:#?}", &body));
+    let body = client.get(dictionary_check).send()?.text()?;
+    let json_body: Value = if let Ok(info) = serde_json::from_str(&body){
+        info
+    } else {
+        return Err(body.into());
+    };
 
     let mut output = Vec::new();
 
@@ -39,7 +41,7 @@ pub fn get_word_defs(word: &str, num_of_defs: u32, client: &reqwest::blocking::C
             )
         );
     }
-    output
+    Ok(output)
 }
 
 /// Holds some definitions of a word
