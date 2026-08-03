@@ -46,22 +46,25 @@ fn main() {
             tx.clone(),
             client.clone(),
         );
-        thread::spawn(move || {
-            // getting data
-            let def_data = (
-                word_2.to_string(),
-                get_word_defs(&word_2, 2_u32, &*client_ref),
-            );
+        thread::Builder::new()
+            .name(format!("Getting def for word {}", &word_2))
+            .spawn(move || {
+                // getting data
+                let def_data = (
+                    word_2.to_string(),
+                    get_word_defs(&word_2, 2_u32, &*client_ref),
+                );
 
-            // only send the data if there is a def
-            
-            let mut there_is_a_def = false; 
-            for def in def_data.1.iter() {
-                there_is_a_def |= def.def.is_some();
+                // only send the data if there is a def
+                
+                let mut there_is_a_def = false; 
+                for def in def_data.1.iter() {
+                    there_is_a_def |= def.def.is_some();
+                }
+
+                if there_is_a_def { sender.send(def_data).unwrap(); }
             }
-
-            if there_is_a_def { sender.send(def_data).unwrap(); }
-        });
+        );
     }
     std::mem::drop(tx);
 

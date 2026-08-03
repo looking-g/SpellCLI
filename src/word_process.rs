@@ -12,7 +12,7 @@ pub fn get_word_defs(word: &str, num_of_defs: u32, client: &reqwest::blocking::C
     let body = client.get(dictionary_check).send().unwrap() // TODO: code better error handling
         .text().unwrap();
     let json_body: Value = serde_json::from_str(&body)
-        .expect("api.dictionaryapi.dev should always return valid json");
+        .expect(&format!("api.dictionaryapi.dev should always return valid json, data: {:#?}", &body));
 
     let mut output = Vec::new();
 
