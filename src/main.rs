@@ -5,6 +5,8 @@ mod word_process;
 use word_process::*;
 
 use std::collections::HashMap;
+
+#[cfg(debug_assertions)]
 use std::time;
 use std::sync::{mpsc, Arc};
 use std::thread;
@@ -20,6 +22,7 @@ fn main() {
     if let Err(e) = result{
         println!("read_line error: {}", e);
     }
+    #[cfg(debug_assertions)]
     let timer = time::Instant::now(); // Timer for timing this CLI 
     let word = first_word(&input).to_lowercase();
     if word.len() < 2 { println!("input is too short"); return (); }
@@ -36,6 +39,11 @@ fn main() {
 
     // getting the word defs
 
+    #[cfg(debug_assertions)]
+    let silent_failed_def_threads: Arc<u32> = Arc::new(0_u32);
+    #[cfg(debug_assertions)]
+    let total_def_thread_count = wordsims.len();
+
     let (tx, rx) = mpsc::channel(); // transmitter and receiver for the def hashmap data
     let mut word_defs: HashMap<String, Vec<WordDef>> = HashMap::new();
     let client = Arc::new(reqwest::blocking::Client::new());
@@ -45,7 +53,9 @@ fn main() {
             tx.clone(),
             client.clone(),
         );
-        thread::Builder::new()
+        #[cfg(debug_assertions)]
+        let mut fail_count = silent_failed_def_threads.clone();
+        let _ = thread::Builder::new()
             .name(format!("Getting def for word {}", &word_2))
             .spawn(move || {
                 // getting data
@@ -61,7 +71,9 @@ fn main() {
                             Err(e) => panic!("unknown error: {}", e),
                         }
                     }
-                    // panic!("could not get def data");
+                    // panic!("could not get def data");  
+                    #[cfg(debug_assertions)]
+                    { *Arc::make_mut(&mut fail_count) += 1_u32; }
                     return ();
                 };
 
@@ -133,8 +145,15 @@ fn main() {
         
     }
 
-    if cfg!(debug_assertions) {
+
+    #[cfg(debug_assertions)]
+    {
         println!("Took {} millis to run", timer.elapsed().as_millis());
+        println!(
+            "{}/{} def threads failed silently", 
+            Arc::<u32>::into_inner(silent_failed_def_threads).unwrap(), 
+            total_def_thread_count
+        );
     }
 
 }
@@ -177,7 +196,7 @@ fn print_def(wordsim: &WordSim, lookup: &HashMap<String, Vec<WordDef>>, display_
 
         }
 
-        println!( "{}", def_text);
+        println!("{}", def_text);
 }
 
 
