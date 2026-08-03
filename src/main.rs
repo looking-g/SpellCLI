@@ -36,7 +36,6 @@ fn main() {
 
     // getting the word defs
 
-
     let (tx, rx) = mpsc::channel(); // transmitter and receiver for the def hashmap data
     let mut word_defs: HashMap<String, Vec<WordDef>> = HashMap::new();
     let client = Arc::new(reqwest::blocking::Client::new());
@@ -50,9 +49,25 @@ fn main() {
             .name(format!("Getting def for word {}", &word_2))
             .spawn(move || {
                 // getting data
+
+                let word_defs = 'def_get: { 
+                    // Trys up to three times to get the def of a word
+                    for _ in 0..3 {
+                        let word_defs = get_word_defs(&word_2, 2_u32, &*client_ref);
+                        match word_defs{
+                            Ok(defs) => break 'def_get defs,
+                            // try again if bad gateway
+                            Err(e) if *e.to_string() == "error code: 502\n".to_string() => continue,
+                            Err(e) => panic!("unknown error: {}", e),
+                        }
+                    }
+                    // panic!("could not get def data");
+                    return ();
+                };
+
                 let def_data = (
                     word_2.to_string(),
-                    get_word_defs(&word_2, 2_u32, &*client_ref),
+                    word_defs,
                 );
 
                 // only send the data if there is a def
