@@ -1,6 +1,5 @@
 use std::io;
 
-
 mod word_process;
 use word_process::*;
 
@@ -8,8 +7,13 @@ use std::collections::HashMap;
 
 #[cfg(debug_assertions)]
 use std::time;
-use std::sync::{mpsc, Arc};
+use std::sync::mpsc;
 use std::thread;
+
+const NUMBER_OF_TOP_WORDS: u32 = 4;
+const NUMBER_OF_TOP_WORDS_GOT: u32 = 8;
+
+const NUMBER_OF_OUT_DEFS: u32 = 2;
 
 fn main() {
     
@@ -29,20 +33,12 @@ fn main() {
 
     // the difference here is for reduncency; api.dictionaryapi.dev & wordnik_list have differnt
     // words
-    let mut num_print_def = 2_u32; // number of deffinitions that are prited
-    let num_search_def = 5_u32; // number of deffinitions that are requested
 
 
     // getting all the words
-    let wordsims: Vec<WordSim> = check_against(&word, num_search_def, 4).into_iter().rev().collect();
-
+    let wordsims: Vec<WordSim> = check_against(&word, NUMBER_OF_TOP_WORDS_GOT, 4).into_iter().rev().collect();
 
     // getting the word defs
-
-    #[cfg(debug_assertions)]
-    let silent_failed_def_threads: Arc<u32> = Arc::new(0_u32);
-    #[cfg(debug_assertions)]
-    let total_def_thread_count = wordsims.len();
 
     let (tx, rx) = mpsc::channel(); // transmitter and receiver for the def hashmap data
     let mut word_defs: HashMap<String, Vec<WordDef>> = HashMap::new();
@@ -52,19 +48,19 @@ fn main() {
             tx.clone(),
         );
         #[cfg(debug_assertions)]
-        let mut fail_count = silent_failed_def_threads.clone();
         let _ = thread::Builder::new()
             .name(format!("Getting def for word {}", &word_2))
             .spawn(move || {
                 // getting data
 
                 let word_defs = { 
-                    let word_defs = get_word_defs(&word_2, 2_u32);
+                    let word_defs = get_word_defs(&word_2, NUMBER_OF_OUT_DEFS);
                     match word_defs{
                         Ok(defs) => defs,
                         Err(e) => panic!("error: {}", e),
                     }
                 };
+
 
                 let def_data = (
                     word_2.to_string(),
@@ -119,30 +115,27 @@ fn main() {
         }
     }
 
+    let mut output_prints = NUMBER_OF_TOP_WORDS;
 
     // printing other defs
     for wordsim in wordsims_iter{
         // this is (one of) the word(s) the code found to be simmalar to the input word
 
-        print_def(&wordsim, &word_defs, true);
-
-        num_print_def -= 1;
-
-        if num_print_def == 0 { 
-            break;
+        if let Some(word_def) = word_defs.get(wordsim.get_word_2()) {
+            if word_def.len() > 0 {
+                if output_prints > 0 {
+                    print_def(&wordsim, &word_defs, true);
+                    output_prints -= 1;
+                }
+            }
         }
-        
+ 
     }
 
 
     #[cfg(debug_assertions)]
     {
         println!("Took {} millis to run", timer.elapsed().as_millis());
-        println!(
-            "{}/{} def threads failed silently", 
-            Arc::<u32>::into_inner(silent_failed_def_threads).unwrap(), 
-            total_def_thread_count
-        );
     }
 
 }

@@ -2,9 +2,7 @@
 //! Only words made of letters in the range \[a-z\] are guaranteed to have a correct result from
 //! most functions
 
-use reqwest;
 use wordnik_list as word_lib;
-use serde_json::{self, Value};
 use std::fs::File;
 use std::io::Read;
 
@@ -13,7 +11,7 @@ pub fn get_word_defs(input_word: &str, num_of_defs: u32) -> Result<Vec<WordDef>,
 
     let mut dict_file = File::open("english_dictionary.csv")?;
     let mut dict_string = String::new();
-    dict_file.read_to_string(&mut dict_string);
+    dict_file.read_to_string(&mut dict_string)?;
 
     let mut found_word = false;
 
@@ -31,14 +29,13 @@ pub fn get_word_defs(input_word: &str, num_of_defs: u32) -> Result<Vec<WordDef>,
         let mut commas_left = 2_u32;
 
         for c in line.chars() {
-
             if c == ',' && commas_left > 0 {
                 commas_left -= 1;
 
                 if commas_left == 1 {
                     word.make_ascii_lowercase();
-                    found_word = found_word || &word == input_word;
-                    if &word != input_word || output.len() == num_of_defs as usize{
+                    found_word = found_word || (&word == input_word);
+                    if &word != input_word {
                         if found_word {
                             return Ok(output);
                         } else {
@@ -46,6 +43,7 @@ pub fn get_word_defs(input_word: &str, num_of_defs: u32) -> Result<Vec<WordDef>,
                         }
                     }
                 }
+
             } else if commas_left == 2 {
                 word.push(c);
             } else if commas_left == 1 {
@@ -55,11 +53,19 @@ pub fn get_word_defs(input_word: &str, num_of_defs: u32) -> Result<Vec<WordDef>,
             }
         }
 
-        output.push(WordDef::new(
-            "".to_string(),
-            if def == "".to_string() {None} else {Some( def )},
-            if pos == "".to_string() {None} else {Some( pos )},
-        ));
+        word.make_ascii_lowercase();
+
+        if &word == input_word {
+            output.push(WordDef::new(
+                word,
+                if def == "".to_string() {None} else {Some( def )},
+                if pos == "".to_string() {None} else {Some( pos )},
+            ));
+        }
+
+        if output.len() == num_of_defs as usize {
+            return Ok(output);
+        }
     }
 
     Ok(output)
