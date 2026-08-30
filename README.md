@@ -32,4 +32,5 @@ AI was not used in any way toward the creation of this project.
 This SpellCLI uses:
 - [wordnik_list (crate)](https://crates.io/crates/wordnik_list)
 - [English-Dictionary-Database (github)](https://github.com/benjihillard/English-Dictionary-Database)
+  
 _(that's it!)_
