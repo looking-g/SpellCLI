@@ -3,15 +3,13 @@
 //! most functions
 
 use wordnik_list as word_lib;
-use std::fs::File;
-use std::io::Read;
+
+const DICT_FILE_STRING: &'static str = include_str!("../english_dictionary.csv");
 
 /// Gets the definitaion(s) of a word
 pub fn get_word_defs(input_word: &str, num_of_defs: u32) -> Result<Vec<WordDef>, Box<dyn std::error::Error>> {
 
-    let mut dict_file = File::open("english_dictionary.csv")?;
-    let mut dict_string = String::new();
-    dict_file.read_to_string(&mut dict_string)?;
+    let dict_string = DICT_FILE_STRING.to_string();
 
     let mut found_word = false;
 
