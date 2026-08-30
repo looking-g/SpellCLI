@@ -1,18 +1,19 @@
 # SpellCLI
 A CLI that allows you to check the spelling of different words.
 
-# Features
+## Features
 - Check if a word is spelled correctly
 - Get the definition of a word
 - Get words with similar spelling
 - Get the definition of words with similar spelling
 - Get the time the program takes to run (only in `--debug`) 
+- Runs entirely offline
   
-# Spell check
+## Spell check
 Input a word to check it's spelling.
 ![spelling](images/spelling.png)
 
-# Install
+## Install
 This program can be installed with:
 ```bash
 cargo install spellcli
@@ -24,5 +25,11 @@ spellcli
 
 _[cargo needs to be installed first.](https://rust-lang.org/tools/install/)_
 
-# AI Usage
+## AI Usage
 AI was not used in any way toward the creation of this project.
+
+## Dependencies
+This SpellCLI uses:
+- [wordnik_list (crate)](https://crates.io/crates/wordnik_list)
+- [English-Dictionary-Database (github)](https://github.com/benjihillard/English-Dictionary-Database)
+_(that's it!)_
