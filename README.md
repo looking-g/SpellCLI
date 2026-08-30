@@ -29,7 +29,7 @@ _[cargo needs to be installed first.](https://rust-lang.org/tools/install/)_
 AI was not used in any way toward the creation of this project.
 
 ## Dependencies
-This SpellCLI uses:
+SpellCLI uses:
 - [wordnik_list (crate)](https://crates.io/crates/wordnik_list)
 - [English-Dictionary-Database (github)](https://github.com/benjihillard/English-Dictionary-Database)
   
