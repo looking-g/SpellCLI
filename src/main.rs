@@ -29,8 +29,8 @@ fn main() {
 
     // the difference here is for reduncency; api.dictionaryapi.dev & wordnik_list have differnt
     // words
-    let mut num_print_def = 5_u32; // number of deffinitions that are prited
-    let num_search_def = 10_u32; // number of deffinitions that are requested
+    let mut num_print_def = 2_u32; // number of deffinitions that are prited
+    let num_search_def = 5_u32; // number of deffinitions that are requested
 
 
     // getting all the words
@@ -46,12 +46,10 @@ fn main() {
 
     let (tx, rx) = mpsc::channel(); // transmitter and receiver for the def hashmap data
     let mut word_defs: HashMap<String, Vec<WordDef>> = HashMap::new();
-    let client = Arc::new(reqwest::blocking::Client::new());
     for wordsim in wordsims.iter() {
-        let (word_2, sender, client_ref) = (
+        let (word_2, sender) = (
             wordsim.get_word_2().to_string(),
             tx.clone(),
-            client.clone(),
         );
         #[cfg(debug_assertions)]
         let mut fail_count = silent_failed_def_threads.clone();
@@ -60,21 +58,12 @@ fn main() {
             .spawn(move || {
                 // getting data
 
-                let word_defs = 'def_get: { 
-                    // Trys up to three times to get the def of a word
-                    for _ in 0..3 {
-                        let word_defs = get_word_defs(&word_2, 2_u32, &*client_ref);
-                        match word_defs{
-                            Ok(defs) => break 'def_get defs,
-                            // try again if bad gateway
-                            Err(e) if *e.to_string() == "error code: 502\n".to_string() => continue,
-                            Err(e) => panic!("unknown error: {}", e),
-                        }
+                let word_defs = { 
+                    let word_defs = get_word_defs(&word_2, 2_u32);
+                    match word_defs{
+                        Ok(defs) => defs,
+                        Err(e) => panic!("error: {}", e),
                     }
-                    // panic!("could not get def data");  
-                    #[cfg(debug_assertions)]
-                    { *Arc::make_mut(&mut fail_count) += 1_u32; }
-                    return ();
                 };
 
                 let def_data = (
@@ -176,7 +165,7 @@ fn print_def(wordsim: &WordSim, lookup: &HashMap<String, Vec<WordDef>>, display_
             if let Some(some_speech) = &def.part_of_speech{            
                 if let Some(some_def) = &def.def{ 
                     def_text.push_str(
-                        &format!("> {}: {}\n",
+                        &format!("  > {}: {}\n",
                             some_speech,
                             some_def,
                         )

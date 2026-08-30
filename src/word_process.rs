@@ -5,47 +5,69 @@
 use reqwest;
 use wordnik_list as word_lib;
 use serde_json::{self, Value};
+use std::fs::File;
+use std::io::Read;
 
 /// Gets the definitaion(s) of a word
-pub fn get_word_defs(word: &str, num_of_defs: u32, client: &reqwest::blocking::Client) -> Result<Vec<WordDef>, Box<dyn std::error::Error>> {
-    let dictionary_check = format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", word);
-    let body = client.get(dictionary_check).send()?.text()?;
-    let json_body: Value = if let Ok(info) = serde_json::from_str(&body){
-        info
-    } else {
-        return Err(body.into());
-    };
+pub fn get_word_defs(input_word: &str, num_of_defs: u32) -> Result<Vec<WordDef>, Box<dyn std::error::Error>> {
+
+    let mut dict_file = File::open("english_dictionary.csv")?;
+    let mut dict_string = String::new();
+    dict_file.read_to_string(&mut dict_string);
+
+    let mut found_word = false;
 
     let mut output = Vec::new();
 
+    let mut line_iter = dict_string.lines();
+    let _ = line_iter.next();
+    let _ = line_iter.next();
 
-    for def_num in 0..num_of_defs {
-        let word_map = &json_body[0]["meanings"][def_num as usize];
+    'lines: for line in line_iter {
+        let mut word = String::new();
+        let mut pos = String::new();
+        let mut def = String::new();
 
-        let word_def = &word_map["definitions"][0]["definition"];
-        let part_of_speech = &word_map["partOfSpeech"];
+        let mut commas_left = 2_u32;
 
+        for c in line.chars() {
 
-        let word_def = word_def.as_str(); // might be somthing wrong with .as_str()
-        let part_of_speech = part_of_speech.as_str();
+            if c == ',' && commas_left > 0 {
+                commas_left -= 1;
 
-        output.push(
-            WordDef::new(
-                word.to_string(), 
-                if let Some(def) = word_def {
-                    Some(def.to_string())
-                } else { None },
-                if let Some(pos) = part_of_speech {
-                    Some(pos.to_string())
-                } else { None },
-            )
-        );
+                if commas_left == 1 {
+                    word.make_ascii_lowercase();
+                    found_word = found_word || &word == input_word;
+                    if &word != input_word || output.len() == num_of_defs as usize{
+                        if found_word {
+                            return Ok(output);
+                        } else {
+                            continue 'lines;
+                        }
+                    }
+                }
+            } else if commas_left == 2 {
+                word.push(c);
+            } else if commas_left == 1 {
+                pos.push(c);
+            } else if commas_left == 0 && c != '"' {
+                def.push(c);
+            }
+        }
+
+        output.push(WordDef::new(
+            "".to_string(),
+            if def == "".to_string() {None} else {Some( def )},
+            if pos == "".to_string() {None} else {Some( pos )},
+        ));
     }
+
     Ok(output)
 }
 
+
 /// Holds some definitions of a word
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WordDef{
     #[allow(unused)]
     pub word: String,
@@ -53,7 +75,7 @@ pub struct WordDef{
     pub part_of_speech: Option<String>,
 }
 impl WordDef {
-    fn new(word: String, def: Option<String>, part_of_speech: Option<String>) -> Self {
+    pub fn new(word: String, def: Option<String>, part_of_speech: Option<String>) -> Self {
         Self{
             word, 
             def, 
