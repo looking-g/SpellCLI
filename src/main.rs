@@ -40,14 +40,13 @@ fn main() {
 
     // getting the word defs
 
-    let (tx, rx) = mpsc::channel(); // transmitter and receiver for the def hashmap data
+    let (tx, rx) = mpsc::channel::<(String, Vec<WordDef>)>(); // transmitter and receiver for the def hashmap data
     let mut word_defs: HashMap<String, Vec<WordDef>> = HashMap::new();
     for wordsim in wordsims.iter() {
         let (word_2, sender) = (
             wordsim.get_word_2().to_string(),
             tx.clone(),
         );
-        #[cfg(debug_assertions)]
         let _ = thread::Builder::new()
             .name(format!("Getting def for word {}", &word_2))
             .spawn(move || {
@@ -60,7 +59,6 @@ fn main() {
                         Err(e) => panic!("error: {}", e),
                     }
                 };
-
 
                 let def_data = (
                     word_2.to_string(),

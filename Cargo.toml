@@ -9,6 +9,4 @@ readme = "README.md"
 
 
 [dependencies]
-reqwest = {version = "0.13", features = ["blocking"]}
 wordnik_list = "0.2"
-serde_json = "1.0"
